@@ -557,8 +557,10 @@ def tutorialPage(request, pk):
         ),
         active=True
     ).order_by('-sequence_number', '-pk').first()
+    # The user is always the owner, because the user's own
+    # count is where the tutorial data comes from.
     ctx = get_grain_info(
-        None,
+        tp.marks.grain.get_owner().id,
         tp.marks.grain.pk,
         'S',
         object=tp,
@@ -866,7 +868,7 @@ def add_grain_info_markers(info, grain, ft_type, worker):
         objects = objects.filter(worker=worker)
     save = objects.order_by('result').first()
     if save:
-        info['marker_latlngs'] = save.get_latlngs()
+        info['marker_latlngs'] = save.get_latlngs_within_roi()
         info['points'] = save.points()
 
 def get_grain_info(user, pk, ft_type, **kwargs):
@@ -881,10 +883,8 @@ def get_grain_info(user, pk, ft_type, **kwargs):
     the_grain = grain.index
     ft_type = ft_type
     images_list = get_grain_images_list(grain, ft_type)
-    rois = None
-    if len(images_list) > 0:
-        matrix = grain.mica_transform_matrix if ft_type == 'I' else None
-        rois = load_rois(grain, ft_type, matrix)
+    matrix = grain.mica_transform_matrix if ft_type == 'I' else None
+    rois = load_rois(grain, ft_type, matrix)
     if rois is None:
         return {
             'grain_info': 'null',
